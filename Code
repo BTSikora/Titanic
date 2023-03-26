@@ -1,0 +1,131 @@
+# Import Key Libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Read the data using pandas dataframe
+titanic = pd.read_csv('titanic.csv')
+# Show the data head!
+titanic.head()
+
+# Let's count the number of survivors and non-survivors
+survived = titanic[titanic['Survived'] == 1] #549 did not survive, 342 survived
+no_survived = titanic[titanic['Survived'] == 0]
+
+# Count the survived and deceased 
+print("Total =", len(titanic))
+
+print("Number of passengers who survived =", len(survived))
+print("Percentage Survived =", 1. * len(survived) / len(titanic) * 100.0, "%")
+ 
+print("Number of passengers who did not Survive =", len(no_survived))
+print("Percentage who did not survive =", 1. * len(no_survived) / len(titanic) * 100.0, "%")
+
+
+# Bar Chart to indicate the number of people who survived based on their class
+# If you are a first class, you have a higher chance of survival
+# hue - dzieli na kategorie
+plt.figure(figsize=[15, 10])
+plt.subplot(211)
+sns.countplot(x = 'Pclass', data = titanic)
+plt.subplot(212)
+sns.countplot(data = titanic, x = 'Pclass', hue = 'Survived')
+
+sns.countplot(data = titanic, x = 'SibSp', hue = 'Survived')
+# higher if 1 sibling according to the chart
+
+# Bar Chart to indicate the number of people survived based on their Parch status (how many parents onboard)
+# If you have 1, 2, or 3 family members (Parch = 1,2), you have a higher chance of survival compared to being alone (Parch = 0)
+plt.figure(figsize = [15, 10])
+sns.countplot(data = titanic, x = 'Parch', hue = 'Survived')
+
+# Bar Chart to indicate the number of people survived based on their sex
+# If you are a female, you have a higher chance of survival compared to other ports!
+plt.figure(figsize = [15, 10])
+plt.subplot(211)
+sns.countplot(x = 'Sex', data = titanic)
+plt.subplot(212)
+sns.countplot(x = 'Sex', hue = 'Survived', data = titanic)
+
+# Age Histogram 
+titanic['Age'].hist()
+# Fare Histogram 
+titanic['Fare'].hist()
+
+# Let's explore which dataset is missing
+sns.heatmap(titanic.isnull(), yticklabels = False, cbar = False, cmap="Blues")
+
+# Let's drop the cabin column and test with inplace = true and false 
+# (inplace tells you to change the actual df that we are working on 
+# - True meaning changes the df, False, it doesnt)
+titanic.drop('Cabin', axis = 1, inplace = True)
+titanic.shape
+
+# Let's drop the embarked, Ticket, passengerID, and Name as well
+titanic.drop(['Name', 'Ticket', 'Embarked', 'PassengerId'],axis =1, inplace = True)
+
+# Let's view the data one more time!
+sns.heatmap(titanic.isnull(), yticklabels = False, cbar = False, cmap="Blues")
+
+# Let's get the average age for male (~29) and female (~25)
+plt.figure(figsize=(15, 10))
+sns.boxplot(x = 'Sex', y = 'Age', data = titanic)
+
+def Fill_Age(data):
+    '''
+    This function fills mean of age in the titanic.csv 
+    data: titanic.csv dataframe
+    '''
+    age = data[0]
+    sex = data[1]
+
+    if pd.isnull(age):
+        if sex == 'male': 
+            return 29
+        else:
+            return 25
+    else:
+        return age
+        
+titanic['Age'] = titanic[['Age','Sex']].apply(Fill_Age, axis=1)
+titanic
+
+# Let's view the data one more time!
+sns.heatmap(titanic.isnull(), yticklabels = False, cbar = False, cmap="Blues")
+
+# You just need one column only to represent male or female, where 1 = Female, 0 = Male
+pd.get_dummies(titanic['Sex'])
+
+male = pd.get_dummies(titanic['Sex'], drop_first = True)
+
+# first let's drop the embarked and sex
+titanic.drop(['Sex'], axis = 1, inplace = True)
+
+
+# Now let's add the encoded column male again, where male = 1 and female = 0
+titanic = pd.concat([titanic, male], axis = 1)
+
+#Let's drop the target coloumn before we do train test split
+X = titanic.drop('Survived', axis = 1).values
+y = titanic['Survived'].values
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=10)
+
+# Fitting Logistic Regression to the Training set
+from sklearn.linear_model import LogisticRegression
+lrc = LogisticRegression()
+lrc.fit(X_train, y_train)
+
+from sklearn.metrics import accuracy_score
+y_pred = lrc.predict(X_test)
+accuracy_score(y_test, y_pred)
+
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(y_test, y_pred)
+sns.heatmap(cm, annot = True, fmt = "d")
+
+from sklearn.metrics import classification_report
+print(classification_report(y_test, y_pred))
+
